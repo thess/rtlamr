@@ -1,4 +1,4 @@
-// +build !rtlsdr
+// +build rtlsdr
 
 // RTLAMR - An rtl-sdr receiver for smart meters operating in the 900MHz ISM band.
 // Copyright (C) 2015 Douglas Hall
@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/bemasher/rtlamr/parse"
-	"github.com/bemasher/rtltcp"
+	"github.com/jpoirier/gortlsdr"
 
 	_ "github.com/bemasher/rtlamr/idm"
 	_ "github.com/bemasher/rtlamr/r900"
@@ -41,7 +41,7 @@ import (
 var rcvr Receiver
 
 type Receiver struct {
-	rtltcp.SDR
+	*rtlsdr.Context
 	p  parse.Parser
 	fc parse.FilterChain
 }
@@ -52,22 +52,16 @@ func (rcvr *Receiver) NewReceiver() {
 		log.Fatal(err)
 	}
 
-	// Connect to rtl_tcp server.
-	if err := rcvr.Connect(nil); err != nil {
+	// Open rtl-sdr dongle.
+	if rcvr.Context, err = rtlsdr.Open(0); err != nil {
 		log.Fatal(err)
 	}
-
-	rcvr.HandleFlags()
 
 	cfg := rcvr.p.Cfg()
 
 	gainFlagSet := false
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
-		case "centerfreq":
-			cfg.CenterFreq = uint32(rcvr.Flags.CenterFreq)
-		case "samplerate":
-			cfg.SampleRate = int(rcvr.Flags.SampleRate)
 		case "gainbyindex", "tunergainmode", "tunergain", "agcmode":
 			gainFlagSet = true
 		case "unique":
@@ -79,21 +73,21 @@ func (rcvr *Receiver) NewReceiver() {
 		}
 	})
 
-	rcvr.SetCenterFreq(cfg.CenterFreq)
-	rcvr.SetSampleRate(uint32(cfg.SampleRate))
-
-	if !gainFlagSet {
-		rcvr.SetGainMode(true)
+	if err := rcvr.SetCenterFreq(int(cfg.CenterFreq)); err != nil {
+		log.Fatal(err)
+	}
+	if err := rcvr.SetSampleRate(int(cfg.SampleRate)); err != nil {
+		log.Fatal(err)
+	}
+	if err := rcvr.SetTunerGainMode(gainFlagSet); err != nil {
+		log.Fatal(err)
 	}
 
 	if !*quiet {
 		rcvr.p.Log()
 	}
 
-	// Tell the user how many gain settings were reported by rtl_tcp.
-	if !*quiet {
-		log.Println("GainCount:", rcvr.SDR.Info.GainCount)
-	}
+	rcvr.ResetBuffer()
 
 	return
 }
@@ -111,16 +105,16 @@ func (rcvr *Receiver) Run() {
 
 	in, out := io.Pipe()
 
-	go func() {
-		tcpBlock := make([]byte, 16384)
-		for {
-			n, err := rcvr.Read(tcpBlock)
-			if err != nil {
-				return
-			}
-			out.Write(tcpBlock[:n])
-		}
+	defer func() {
+		in.Close()
+		out.Close()
 	}()
+
+	rtlsdrCb := func (buf []byte) {
+		out.Write(buf)
+	}
+
+	go rcvr.ReadAsync(rtlsdrCb, nil, 1, 16384)
 
 	block := make([]byte, rcvr.p.Cfg().BlockSize2)
 
@@ -200,7 +194,6 @@ var (
 )
 
 func main() {
-	rcvr.RegisterFlags()
 	RegisterFlags()
 
 	flag.Parse()
@@ -220,9 +213,19 @@ func main() {
 
 	rcvr.NewReceiver()
 
-	defer logFile.Close()
-	defer sampleFile.Close()
-	defer rcvr.Close()
+	defer func() {
+		logFile.Close()
+		sampleFile.Close()
+
+		fmt.Println("Cancelling...")
+		err := rcvr.CancelAsync()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Closing...")
+		rcvr.Close()
+		os.Exit(0)
+	}()
 
 	rcvr.Run()
 }

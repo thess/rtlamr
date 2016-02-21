@@ -1,4 +1,4 @@
-// +build !rtlsdr
+// +build rtlsdr
 
 // RTLAMR - An rtl-sdr receiver for smart meters operating in the 900MHz ISM band.
 // Copyright (C) 2015 Douglas Hall
@@ -99,12 +99,9 @@ func RegisterFlags() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage of %s: (rtlsdr version)\n", os.Args[0])
 		printDefaults(rtlamrFlags, true)
-
 		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, "rtltcp specific:")
-		printDefaults(rtlamrFlags, false)
 	}
 }
 
