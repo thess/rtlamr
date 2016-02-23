@@ -59,11 +59,8 @@ func (rcvr *Receiver) NewReceiver() {
 
 	cfg := rcvr.p.Cfg()
 
-	gainFlagSet := false
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
-		case "gainbyindex", "tunergainmode", "tunergain", "agcmode":
-			gainFlagSet = true
 		case "unique":
 			rcvr.fc.Add(NewUniqueFilter())
 		case "filterid":
@@ -77,9 +74,6 @@ func (rcvr *Receiver) NewReceiver() {
 		log.Fatal(err)
 	}
 	if err := rcvr.SetSampleRate(int(cfg.SampleRate)); err != nil {
-		log.Fatal(err)
-	}
-	if err := rcvr.SetTunerGainMode(gainFlagSet); err != nil {
 		log.Fatal(err)
 	}
 
