@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bemasher/rtlamr/decode"
-
-	"github.com/bemasher/rtlamr/csv"
+	"../decode"
+	"../csv"
 )
 
 const (

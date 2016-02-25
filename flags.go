@@ -30,8 +30,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bemasher/rtlamr/csv"
-	"github.com/bemasher/rtlamr/parse"
+	"./csv"
+	"./parse"
 )
 
 var logFilename = flag.String("logfile", "/dev/stdout", "log statement dump file")

@@ -29,13 +29,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bemasher/rtlamr/parse"
-	"github.com/jpoirier/gortlsdr"
+	"./parse"
+	"./rtlsdr"
 
-	_ "github.com/bemasher/rtlamr/idm"
-	_ "github.com/bemasher/rtlamr/r900"
-	_ "github.com/bemasher/rtlamr/scm"
-	_ "github.com/bemasher/rtlamr/scmplus"
+	_ "./idm"
+	_ "./r900"
+	_ "./scm"
+	_ "./scmplus"
 )
 
 var rcvr Receiver
@@ -53,14 +53,18 @@ func (rcvr *Receiver) NewReceiver() {
 	}
 
 	// Open rtl-sdr dongle.
-	if rcvr.Context, err = rtlsdr.Open(0); err != nil {
+	if rcvr.Context, err = rtlsdr.Open(*devIndex); err != nil {
+		log.Printf("RTL-SDR device (%d) not found\n", *devIndex)
 		log.Fatal(err)
 	}
 
 	cfg := rcvr.p.Cfg()
 
+	gainFlagSet := false
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
+		case "gainbyindex", "tunergainmode", "tunergain", "agcmode":
+			gainFlagSet = true
 		case "unique":
 			rcvr.fc.Add(NewUniqueFilter())
 		case "filterid":
@@ -70,10 +74,17 @@ func (rcvr *Receiver) NewReceiver() {
 		}
 	})
 
+	// TODO: Add additional flags for rtl-sdr settings
 	if err := rcvr.SetCenterFreq(int(cfg.CenterFreq)); err != nil {
 		log.Fatal(err)
 	}
 	if err := rcvr.SetSampleRate(int(cfg.SampleRate)); err != nil {
+		log.Fatal(err)
+	}
+
+	// Set auto gain mode
+	// TODO: Add manual settings, etc.
+	if err := rcvr.SetTunerGainMode(gainFlagSet); err != nil {
 		log.Fatal(err)
 	}
 
@@ -108,7 +119,9 @@ func (rcvr *Receiver) Run() {
 		out.Write(buf)
 	}
 
-	go rcvr.ReadAsync(rtlsdrCb, nil, 1, 16384)
+	// TODO: Add vars to override default buffers and size
+	log.Printf("Starting rtl-sdr input. Buffers = %d bytes\n", *nSDRBuf * *sdrBufSize)
+	go rcvr.ReadAsync(rtlsdrCb, nil, *nSDRBuf, *sdrBufSize)
 
 	block := make([]byte, rcvr.p.Cfg().BlockSize2)
 

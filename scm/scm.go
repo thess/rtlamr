@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/bemasher/rtlamr/crc"
-	"github.com/bemasher/rtlamr/decode"
-	"github.com/bemasher/rtlamr/parse"
+	"../crc"
+	"../decode"
+	"../parse"
 )
 
 func init() {

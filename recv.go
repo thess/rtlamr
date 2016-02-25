@@ -29,13 +29,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bemasher/rtlamr/parse"
-	"github.com/bemasher/rtltcp"
+	"./parse"
+	"./rtltcp"
 
-	_ "github.com/bemasher/rtlamr/idm"
-	_ "github.com/bemasher/rtlamr/r900"
-	_ "github.com/bemasher/rtlamr/scm"
-	_ "github.com/bemasher/rtlamr/scmplus"
+	_ "./idm"
+	_ "./r900"
+	_ "./scm"
+	_ "./scmplus"
 )
 
 var rcvr Receiver

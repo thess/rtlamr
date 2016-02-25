@@ -30,8 +30,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bemasher/rtlamr/csv"
-	"github.com/bemasher/rtlamr/parse"
+	"./csv"
+	"./parse"
 )
 
 var logFilename = flag.String("logfile", "/dev/stdout", "log statement dump file")
@@ -61,6 +61,11 @@ var single = flag.Bool("single", false, "one shot execution, if used with -filte
 
 var version = flag.Bool("version", false, "display build date and commit hash")
 
+var nSDRBuf = flag.Int("async_buffers", 16, "Number of buffers for rtl-sdr async interface")
+var sdrBufSize = flag.Int("async_bufsize", 64*1024, "size of rtl-sdr async buffers")
+
+var devIndex = flag.Int("device", 0, "device index of rtl-sdr dongle")
+
 func RegisterFlags() {
 	meterID = MeterIDFilter{make(UintMap)}
 	meterType = MeterTypeFilter{make(UintMap)}
@@ -85,6 +90,9 @@ func RegisterFlags() {
 		"cpuprofile":   true,
 		"fastmag":      true,
 		"version":      true,
+		"async_buffers": true,
+		"async_bufsize": true,
+		"device":	true,
 	}
 
 	printDefaults := func(validFlags map[string]bool, inclusion bool) {
